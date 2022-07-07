@@ -136,9 +136,11 @@ def main(res, save_dir):
     print('Done')
 
 
-REDO = False
-TGT_HEIGHT = 1.6
+# REDO = False
+# TGT_HEIGHT = 1.6
+REDO = True
+TGT_HEIGHT = 0.2
 TGT_CENTER = 0.
 if __name__ == "__main__":
     res = 64
-    main(res, save_dir='assets/volumetric_smpl_function_{}'.format(res))
+    main(res, save_dir='assets/volumetric_mano_function_{}'.format(res))

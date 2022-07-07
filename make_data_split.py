@@ -19,27 +19,31 @@ from os.path import split, join, exists
 # ---subject-2
 # --datasets-2
 
-DATA_PATH = '/BS/bharat-2/static00/learnt_registration'
+# DATA_PATH = '/BS/bharat-2/static00/learnt_registration'
+DATA_PATH = '/data/new_disk/liyuwei/0_HANDMRI_DATA/mpi_data/handsOnly_SCANS'
 # add the folders you want to be the part of this dataset. Typically these would be the folders in side DATA_PATH
-datasets = ['axyz', 'renderpeople', 'renderpeople_rigged', 'th_good_1', 'th_good_3', 'julian', 'treedy']
+# datasets = ['axyz', 'renderpeople', 'renderpeople_rigged', 'th_good_1', 'th_good_3', 'julian', 'treedy']
+datasets = ['']
 
 
 def function(datasets, split, save_path):
     lis = []
     for dataset in datasets:
         for scan in tqdm(glob(join(DATA_PATH, dataset, '*'))):
-            lis.append(scan)
+            if "l_mirrored.ply" in scan or "r.ply" in scan:
+                lis.append(scan)
 
     print(len(lis))
 
     tr_lis, te_lis, count = [], [], 0
     for dataset in datasets:
         for scan in tqdm(glob(join(DATA_PATH, dataset, '*'))):
-            if count > split * len(lis):
-                tr_lis.append(scan)
-            else:
-                te_lis.append(scan)
-            count += 1
+            if "l_mirrored.ply" in scan or "r.ply" in scan:
+                if count > split * len(lis):
+                    tr_lis.append(scan)
+                else:
+                    te_lis.append(scan)
+                count += 1
 
     print('train', len(tr_lis), 'test', len(te_lis))
     pkl.dump({'train': tr_lis, 'val': te_lis},
@@ -47,7 +51,7 @@ def function(datasets, split, save_path):
 
 
 def main():
-    SAVE_PATH = 'assets/data_split_01.pkl'
+    SAVE_PATH = 'assets/hand_data_split_01.pkl'
     SPLIT = 0.1
 
     function(datasets, SPLIT, SAVE_PATH)
