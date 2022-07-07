@@ -40,9 +40,10 @@ def th_pack(tensor):
 
 def subtract_flat_id(rot_mats):
     # Subtracts identity as a flattened tensor
+    rot_nb = int(rot_mats.shape[1] / 9)
     id_flat = torch.eye(
         3, dtype=rot_mats.dtype, device=rot_mats.device).view(1, 9).repeat(
-            rot_mats.shape[0], 23)
+            rot_mats.shape[0], rot_nb)
     # id_flat.requires_grad = False
     results = rot_mats - id_flat
     return results

@@ -16,6 +16,7 @@ from psbody.mesh import Mesh
 from lib.smpl_paths import SmplPaths
 from torch.utils.data import Dataset, DataLoader
 from make_data_split import DATA_PATH
+from pathlib import Path
 
 # Number of points to sample from the scan
 NUM_POINTS = 30000
@@ -36,12 +37,13 @@ class MyDataLoader(Dataset):
         self.naked = naked
         sp = SmplPaths(gender='male')
         self.ref_smpl = sp.get_smpl()
-        self.vt, self.ft = sp.get_vt_ft()
+        # self.vt, self.ft = sp.get_vt_ft()
 
         # Load smpl part labels
-        with open('assets/smpl_parts_dense.pkl', 'rb') as f:
+        with open('assets/mano_parts_dense.pkl', 'rb') as f:
             dat = pkl.load(f, encoding='latin-1')
-        self.smpl_parts = np.zeros((6890, 1))
+        # self.smpl_parts = np.zeros((6890, 1))
+        self.smpl_parts = np.zeros((778, 1))
         for n, k in enumerate(dat):
             self.smpl_parts[dat[k]] = n
 
@@ -93,15 +95,58 @@ class MyDataLoader(Dataset):
         t = R.from_rotvec(rots)
         return t
 
+    # def __getitem__(self, idx):
+    #     path = self.data[idx]
+    #     name = split(path)[1]
+
+    #     input_smpl = Mesh(filename=join(path, name + '_smpl.obj'))
+    #     if self.naked:
+    #         input_scan = Mesh(filename=join(path, name + '_smpl.obj'))
+    #     else:
+    #         input_scan = Mesh(filename=join(path, name + '.obj'))
+    #     temp = trimesh.Trimesh(vertices=input_scan.v, faces=input_scan.f)
+    #     points = temp.sample(NUM_POINTS)
+
+    #     if self.augment:
+    #         rot = self.get_rnd_rotations()
+    #         points = rot.apply(points)
+    #         input_smpl.v = rot.apply(input_smpl.v)
+
+    #     ind, _ = input_smpl.closest_vertices(points)
+    #     part_labels = self.smpl_parts[np.array(ind)]
+    #     correspondences = self.map_mesh_points_to_reference(points, input_smpl, self.ref_smpl.r)
+
+    #     if self.mode == 'train':
+    #         return {'scan': points.astype('float32'),
+    #                 'correspondences': correspondences.astype('float32'),
+    #                 'part_labels': part_labels.astype('float32'),
+    #                 'name': path
+    #                 }
+
+    #     vc = self.map_vitruvian_vertex_color(points, input_smpl)
+    #     return {'scan': points.astype('float32'),
+    #             'smpl': input_smpl.v.astype('float32'),
+    #             'correspondences': correspondences.astype('float32'),
+    #             'part_labels': part_labels.astype('float32'),
+    #             'scan_vc': vc,
+    #             'name': path
+    #             }
+
     def __getitem__(self, idx):
         path = self.data[idx]
+
+        mpi_data_root = Path(path).parent.parent
+
         name = split(path)[1]
 
-        input_smpl = Mesh(filename=join(path, name + '_smpl.obj'))
-        if self.naked:
-            input_scan = Mesh(filename=join(path, name + '_smpl.obj'))
-        else:
-            input_scan = Mesh(filename=join(path, name + '.obj'))
+
+        input_smpl = Mesh(filename= str(mpi_data_root / 'handsOnly_REGISTRATIONS_r_lm___POSES' / name))
+        input_scan = Mesh(filename=path)
+        # input_smpl = Mesh(filename=join(path, name + '_smpl.obj'))
+        # if self.naked:
+        #     input_scan = Mesh(filename=join(path, name + '_smpl.obj'))
+        # else:
+        #     input_scan = Mesh(filename=join(path, name + '.obj'))
         temp = trimesh.Trimesh(vertices=input_scan.v, faces=input_scan.f)
         points = temp.sample(NUM_POINTS)
 
@@ -155,9 +200,9 @@ class MyDataLoaderCacher(MyDataLoader):
         self.vt, self.ft = sp.get_vt_ft()
 
         # Load smpl part labels
-        with open('assets/smpl_parts_dense.pkl', 'rb') as f:
+        with open('assets/mano_parts_dense.pkl', 'rb') as f:
             dat = pkl.load(f, encoding='latin-1')
-        self.smpl_parts = np.zeros((6890, 1))
+        self.smpl_parts = np.zeros((778, 1))
         for n, k in enumerate(dat):
             self.smpl_parts[dat[k]] = n
 
@@ -165,11 +210,16 @@ class MyDataLoaderCacher(MyDataLoader):
         path = self.data[idx]
         name = split(path)[1]
 
-        input_smpl = Mesh(filename=join(path, name + '_smpl.obj'))
-        if self.naked:
-            input_scan = Mesh(filename=join(path, name + '_smpl.obj'))
-        else:
-            input_scan = Mesh(filename=join(path, name + '.obj'))
+        # input_smpl = Mesh(filename=join(path, name + '_smpl.obj'))
+        # if self.naked:
+        #     input_scan = Mesh(filename=join(path, name + '_smpl.obj'))
+        # else:
+        #     input_scan = Mesh(filename=join(path, name + '.obj'))
+        mpi_data_root = Path(path).parent.parent
+
+        input_smpl = Mesh(filename=str(mpi_data_root / 'handsOnly_REGISTRATIONS_r_lm___POSES' / name))
+        input_scan = Mesh(filename=path)
+
         temp = trimesh.Trimesh(vertices=input_scan.v, faces=input_scan.f)
         points = temp.sample(NUM_POINTS)
 
@@ -193,7 +243,7 @@ class MyDataLoaderCacher(MyDataLoader):
             trans = smpl_dict['trans']
             # print('Loading from cache ', cache_list[-1])
         else:
-            pose = np.zeros((72,))
+            pose = np.zeros((45+3,))
             betas = np.zeros((10,))
             trans = np.zeros((3,))
 

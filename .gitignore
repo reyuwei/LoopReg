@@ -3,3 +3,5 @@ assets/mano_v1_2/*
 assets/smpl/*
 *.pyc
 assets/volumetric*
+scan.xyz
+*.xyz

@@ -64,7 +64,7 @@ class VolumetricSMPL(nn.Module):
         self.grid_fn = correspondence_to_smpl_function
         ## pytorch smpl
         self.smpl = SMPL_Layer(center_idx=0, gender=gender,
-                               model_root='smplpytorch/smplpytorch/native/models').to(device)
+                               model_root='assets/mano_v1_2/models').to(device)
 
     def transform_points(self, points):
         return points * self.scale + self.center
@@ -129,8 +129,8 @@ class VolumetricSMPL(nn.Module):
 
         # reshape back
         shapedirs = shapedirs.view(batch_size, -1, 3, 10)
-        posedirs = posedirs.view(batch_size, -1, 3, 207)
-        skinning_weights = skinning_weights.view(batch_size, -1, 24)
+        posedirs = posedirs.view(batch_size, -1, 3, 135)
+        skinning_weights = skinning_weights.view(batch_size, -1, 16)
 
         # Convert axis-angle representation to rotation matrix rep.
         th_pose_rotmat = th_posemap_axisang(pose)
@@ -144,7 +144,7 @@ class VolumetricSMPL(nn.Module):
         th_results2 = self.compute_smpl_skeleton(beta, pose)
 
         # Skinning
-        p_T = torch.bmm(th_results2.view(-1, 16, 24), skinning_weights.transpose(2, 1)).view(batch_size, 4, 4, -1)
+        p_T = torch.bmm(th_results2.view(-1, 16, 16), skinning_weights.transpose(2, 1)).view(batch_size, 4, 4, -1)
         p_rest_shape_h = torch.cat([
             p_v_posed.transpose(2, 1),
             torch.ones((batch_size, 1, p_v_posed.shape[1]),

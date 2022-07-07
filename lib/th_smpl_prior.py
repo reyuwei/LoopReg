@@ -23,6 +23,7 @@ def get_prior(gender='male', precomputed=False):
         prior = Prior(dp_prior.get_smpl())
         return prior['Generic']
 
+#TODO proior change to mano pose space
 
 class th_Mahalanobis(object):
     def __init__(self, mean, prec, prefix):
@@ -36,8 +37,8 @@ class th_Mahalanobis(object):
         :return:
         '''
         # return (pose[:, self.prefix:] - self.mean)*self.prec
-        temp = pose[:, self.prefix:] - self.mean
-        temp2 = torch.matmul(temp, self.prec) * prior_weight
+        temp = pose[:, self.prefix:] - self.mean[:, :pose.shape[-1]-self.prefix]
+        temp2 = torch.matmul(temp, self.prec[:pose.shape[-1]-self.prefix,:pose.shape[-1]-self.prefix]) * prior_weight
         return (temp2 * temp2).sum(dim=1)
         
 

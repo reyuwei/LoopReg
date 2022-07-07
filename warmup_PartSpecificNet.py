@@ -17,7 +17,7 @@ def main(mode, exp_id, optimizer, batch_size, epochs, save_name=None, num_saves=
     if split_file is None:
         split_file = 'assets/data_split_01.pkl'
 
-    corr_net = PointNet2Part(in_features=0, num_parts=14, num_classes=3)
+    corr_net = PointNet2Part(in_features=0, num_parts=6, num_classes=3)
 
     if naked:
         exp_name = 'part_specific_net/naked_exp_id_{}'.format(exp_id)

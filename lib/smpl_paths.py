@@ -14,8 +14,13 @@ from lib.geometry import get_hres
 import scipy.sparse as sp
 
 ## Set your paths here
-ROOT = '/BS/RVH/work/data/'
+# ROOT = '/BS/RVH/work/data/'
+# ROOT = 'assets/smpl'
 smpl_vt_ft_path = 'assets/smpl_vt_ft.pkl'
+
+ROOT = 'assets/mano_v1_2'
+
+
 
 class SmplPaths:
     def __init__(self, project_dir='', exp_name='', gender='neutral', garment=''):
@@ -26,22 +31,19 @@ class SmplPaths:
         self.garment = garment
 
     def get_smpl_file(self):
-        if self.gender == 'neutral':
-            return join(ROOT,
-                        'smpl_models',
-                        'neutral',
-                        'basicModel_neutral_lbs_10_207_0_v1.0.0.pkl')
+        # if self.gender == 'neutral':
+        #     return join(ROOT,
+        #                 'models',
+        #                 'basicmodel_neutral_lbs_10_207_0_v1.1.0.pkl')
 
-        else:
-            smpl_file = join(ROOT,
-                             'smpl_models',
-                             'lrotmin',
-                             'lbs_tj10smooth6_0fixed_normalized',
-                             self.gender,
-                             'model.pkl')
+        # else:
+        #     smpl_file = join(ROOT,
+        #                      'models',
+        #                      'basicmodel_' + self.gender[0] + '_lbs_10_207_0_v1.1.0.pkl')
 
-
-            return smpl_file
+            # return smpl_file
+        smpl_file = join(ROOT, 'models', 'MANO_RIGHT.pkl')
+        return smpl_file
 
     def get_smpl(self):
         smpl_m = load_model(self.get_smpl_file())

@@ -34,7 +34,7 @@ def main(mode, exp_id, optimizer, batch_size, epochs, pretrained_path=None, save
     if split_file is None:
         split_file = 'assets/data_split_01.pkl'
 
-    corr_net = PointNet2Part(in_features=0, num_parts=14, num_classes=3)
+    corr_net = PointNet2Part(in_features=0, num_parts=6, num_classes=3)
 
     if pretrained_path is not None:
         # Load weights from pre-training
@@ -50,7 +50,7 @@ def main(mode, exp_id, optimizer, batch_size, epochs, pretrained_path=None, save
     if mode == 'train':
         dataset = MyDataLoaderCacher('train', batch_size, cache_suffix=cache_suffix,
                                      split_file=split_file,
-                                     num_workers=30, augment=False, naked=naked).get_loader()
+                                     num_workers=0, augment=False, naked=naked).get_loader()
         """ 
         Phase_01: Initialised SMPL are far off from the solution. Optimize SMPL based on correspondences.
         Phase_02: SMPL models are close to solution. Fit SMPL based on ICP.
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     parser.add_argument('-num_saves', default=None, type=int)
     args = parser.parse_args()
 
-    # os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
     # args = lambda : None
     # args.exp_id = '2'
     # args.batch_size = 2

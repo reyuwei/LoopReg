@@ -20,12 +20,22 @@ from lib.torch_functions import batch_sparse_dense_matmul
 
 HAND_VISIBLE = 0.2
 
+# part2num = {
+# 'global': 0, 'leftThigh': 1, 'rightThigh': 2, 'spine': 3, 'leftCalf': 4, 'rightCalf': 5, 'spine1': 6, 'leftFoot': 7,
+#     'rightFoot': 8, 'spine2': 9, 'leftToes': 10, 'rightToes': 11, 'neck': 12, 'leftShoulder': 13, 'rightShoulder': 14,
+#     'head': 15, 'leftUpperArm': 16, 'rightUpperArm': 17, 'leftForeArm': 18, 'rightForeArm': 19, 'leftHand': 20,
+#     'rightHand': 21, 'leftFingers': 22, 'rightFingers': 23
+# }
+
 part2num = {
-'global': 0, 'leftThigh': 1, 'rightThigh': 2, 'spine': 3, 'leftCalf': 4, 'rightCalf': 5, 'spine1': 6, 'leftFoot': 7,
-    'rightFoot': 8, 'spine2': 9, 'leftToes': 10, 'rightToes': 11, 'neck': 12, 'leftShoulder': 13, 'rightShoulder': 14,
-    'head': 15, 'leftUpperArm': 16, 'rightUpperArm': 17, 'leftForeArm': 18, 'rightForeArm': 19, 'leftHand': 20,
-    'rightHand': 21, 'leftFingers': 22, 'rightFingers': 23
+    'palm' : 0, 
+    'index': 1,
+    'middle': 2,
+    'pinky': 3,
+    'ring': 4,
+    'thumb': 5
 }
+
 
 def get_prior_weight(no_right_hand_batch, no_left_hand_batch):
     pr_w = np.ones((len(no_right_hand_batch), 69)).astype('float32')

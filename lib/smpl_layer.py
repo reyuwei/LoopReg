@@ -37,14 +37,16 @@ class SMPL_Layer(Module):
         self.center_idx = center_idx
         self.gender = gender
 
-        if gender == 'neutral':
-            self.model_path = os.path.join(model_root, 'basicModel_neutral_lbs_10_207_0_v1.0.0.pkl')
-        elif gender == 'female':
-            # self.model_path = os.path.join(model_root, 'basicModel_f_lbs_10_207_0_v1.0.0.pkl')
-            self.model_path = os.path.join(model_root, 'female_model.pkl')
-        elif gender == 'male':
-            # self.model_path = os.path.join(model_root, 'basicModel_m_lbs_10_207_0_v1.0.0.pkl')
-            self.model_path = os.path.join(model_root, 'male_model.pkl')
+        # if gender == 'neutral':
+        #     self.model_path = os.path.join(model_root, 'basicModel_neutral_lbs_10_207_0_v1.0.0.pkl')
+        # elif gender == 'female':
+        #     # self.model_path = os.path.join(model_root, 'basicModel_f_lbs_10_207_0_v1.0.0.pkl')
+        #     self.model_path = os.path.join(model_root, 'female_model.pkl')
+        # elif gender == 'male':
+        #     # self.model_path = os.path.join(model_root, 'basicModel_m_lbs_10_207_0_v1.0.0.pkl')
+        #     self.model_path = os.path.join(model_root, 'male_model.pkl')
+
+        self.model_path = os.path.join(model_root, "MANO_RIGHT.pkl")
 
         smpl_data = ready_arguments(self.model_path)
         self.smpl_data = smpl_data

@@ -22,6 +22,7 @@ from models.volumetric_SMPL import VolumetricSMPL
 from lib.smpl_paths import SmplPaths
 from lib.th_smpl_prior import get_prior
 from lib.torch_functions import batch_gather, chamfer_distance
+from pathlib import Path
 
 NUM_POINTS = 30000
 
@@ -274,7 +275,7 @@ class CombinedTrainer(Trainer):
         self.checkpoint_number = checkpoint_number
 
         # Load vsmpl
-        self.vsmpl = VolumetricSMPL('/BS/bharat-2/work/LearntRegistration/test_data/volumetric_smpl_function_64',
+        self.vsmpl = VolumetricSMPL('assets/volumetric_mano_function_64',
                                     device, 'male')
         sp = SmplPaths(gender='male')
         self.ref_smpl = sp.get_smpl()
@@ -283,11 +284,12 @@ class CombinedTrainer(Trainer):
             requires_grad=False).unsqueeze(0)
 
         self.pose_prior = get_prior('male', precomputed=True)
+        # self.pose_prior = get_prior('male', precomputed=False)
 
         # Load smpl part labels
-        with open('/BS/bharat-2/work/LearntRegistration/test_data/smpl_parts_dense.pkl', 'rb') as f:
+        with open('assets/mano_parts_dense.pkl', 'rb') as f:
             dat = pkl.load(f, encoding='latin-1')
-        self.smpl_parts = np.zeros((6890, 1))
+        self.smpl_parts = np.zeros((778, 1))
         for n, k in enumerate(dat):
             self.smpl_parts[dat[k]] = n
 
@@ -499,6 +501,7 @@ class CombinedTrainer(Trainer):
         # Save updated instance specific parameters to cache folder
         paths = batch.get('name')
         for n, p in enumerate(paths):
+            p = Path(p).parent / Path(p).stem
             if not exists(join(p, split(self.opt_dict['cache_folder'])[0])):
                 os.makedirs(join(p, split(self.opt_dict['cache_folder'])[0]))
 
