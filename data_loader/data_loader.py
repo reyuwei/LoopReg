@@ -40,12 +40,13 @@ class MyDataLoader(Dataset):
         # self.vt, self.ft = sp.get_vt_ft()
 
         # Load smpl part labels
-        with open('assets/mano_parts_dense.pkl', 'rb') as f:
-            dat = pkl.load(f, encoding='latin-1')
-        # self.smpl_parts = np.zeros((6890, 1))
-        self.smpl_parts = np.zeros((778, 1))
-        for n, k in enumerate(dat):
-            self.smpl_parts[dat[k]] = n
+        self.smpl_parts = np.load('assets/mano_label_right.txt').reshape(-1, 1)
+        # with open('assets/mano_parts_dense.pkl', 'rb') as f:
+        #     dat = pkl.load(f, encoding='latin-1')
+        # # self.smpl_parts = np.zeros((6890, 1))
+        # self.smpl_parts = np.zeros((778, 1))
+        # for n, k in enumerate(dat):
+        #     self.smpl_parts[dat[k]] = n
 
     def __len__(self):
         return len(self.data)
@@ -75,7 +76,7 @@ class MyDataLoader(Dataset):
 
     @staticmethod
     def map_vitruvian_vertex_color(tgt_vertices, registered_smpl_mesh,
-                                   path_to_cols='/BS/bharat-2/work/LearntRegistration/test_data/vitruvian_cols.npy'):
+                                   path_to_cols='assets/mano_cols.npy'):
         """
         Vitruvian vertex color are defined for SMPL mesh. This function maps these colors from registered smpl to scan.
         """
@@ -200,11 +201,12 @@ class MyDataLoaderCacher(MyDataLoader):
         self.vt, self.ft = sp.get_vt_ft()
 
         # Load smpl part labels
-        with open('assets/mano_parts_dense.pkl', 'rb') as f:
-            dat = pkl.load(f, encoding='latin-1')
-        self.smpl_parts = np.zeros((778, 1))
-        for n, k in enumerate(dat):
-            self.smpl_parts[dat[k]] = n
+        self.smpl_parts = np.load('assets/mano_label_right.txt').reshape(-1, 1)
+        # with open('assets/mano_parts_dense.pkl', 'rb') as f:
+        #     dat = pkl.load(f, encoding='latin-1')
+        # self.smpl_parts = np.zeros((778, 1))
+        # for n, k in enumerate(dat):
+        #     self.smpl_parts[dat[k]] = n
 
     def __getitem__(self, idx):
         path = self.data[idx]

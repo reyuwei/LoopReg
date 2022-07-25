@@ -65,7 +65,7 @@ def main(mode, exp_id, optimizer, batch_size, epochs, pretrained_path=None, save
     elif mode == 'val':
         # MyDataLoaderFaustTest, MyDataLoaderCacher
         dataset = MyDataLoaderCacher('val', batch_size, cache_suffix=cache_suffix, split_file=split_file,
-                                     num_workers=16, naked=naked).get_loader(shuffle=False)
+                                     num_workers=0, naked=naked).get_loader(shuffle=False)
         trainer = CombinedTrainer(corr_net, torch.device("cuda"), None, dataset, exp_name,
                                   optimizer=optimizer, opt_dict={'cache_folder': cache_suffix,
                                                                  'iter_per_step': {1: 200, 2: 101, 3: 1}},
@@ -74,7 +74,7 @@ def main(mode, exp_id, optimizer, batch_size, epochs, pretrained_path=None, save
 
     elif mode == 'eval':
         dataset = MyDataLoaderCacher('val', batch_size, cache_suffix=cache_suffix, split_file=split_file,
-                                     num_workers=16, naked=naked).get_loader(shuffle=False)
+                                     num_workers=0, naked=naked).get_loader(shuffle=False)
         trainer = CombinedTrainer(corr_net, torch.device("cuda"), None, dataset, exp_name,
                                   optimizer=optimizer, opt_dict={'cache_folder': cache_suffix},
                                   checkpoint_number=checkpoint_number)
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     parser.add_argument('-num_saves', default=None, type=int)
     args = parser.parse_args()
 
-    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '3'
     # args = lambda : None
     # args.exp_id = '2'
     # args.batch_size = 2

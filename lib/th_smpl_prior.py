@@ -47,14 +47,40 @@ class Prior(object):
         self.prefix = prefix
         if sm is not None:
             # Compute mean and variance based on the provided poses
-            self.pose_subjects = sm.pose_subjects
-            all_samples = [p[prefix:] for qsub in self.pose_subjects
-                           for name, p in zip(qsub['pose_fnames'], qsub['pose_parms'])]  # if 'CAESAR' in name or 'Tpose' in name or 'ReachUp' in name]
+            # self.pose_subjects = sm.pose_subjects
+            # all_samples = [p[prefix:] for qsub in self.pose_subjects
+                        #    for name, p in zip(qsub['pose_fnames'], qsub['pose_parms'])]  # if 'CAESAR' in name or 'Tpose' in name or 'ReachUp' in name] 
+            
+            from pathlib import Path
+            import pickle as pkl
+            mpi_list = np.load("assets/hand_data_split_01.pkl", allow_pickle=True)
+            mpi_list = mpi_list['train'] + mpi_list['val']
+            all_samples = []
+            for mpi in mpi_list:
+                pose_dict = Path(mpi).parent.parent / "handsOnly_REGISTRATIONS_r_lm___POSES" / (Path(mpi).stem + ".pkl")
+                with open(pose_dict, "rb") as f:
+                    pose_param = pkl.load(f, encoding='bytes')[b'pose']
+                all_samples.append(pose_param.reshape(-1)[prefix:])
+            all_samples = np.stack(all_samples)
+
             self.priors = {'Generic': self.create_prior_from_samples(all_samples)}
+
+            dat = {}
+            dat['mean'] = np.asarray(all_samples).mean(axis=0)
+            from numpy import asarray, linalg
+            from sklearn.covariance import GraphicalLassoCV
+            model = GraphicalLassoCV()
+            model.fit(asarray(all_samples))
+            dat['precision'] = linalg.cholesky(model.precision_)
+
+            with open("assets/mano_pose_prior.pkl", "wb") as f:
+                pkl.dump(dat, f)
+
         else:
             import pickle as pkl
             # Load pre-computed mean and variance
-            dat = pkl.load(open('assets/pose_prior.pkl', 'rb'))
+            dat = pkl.load(open('assets/mano_pose_prior.pkl', 'rb'))
+            # self.priors = dat
             self.priors = {'Generic': th_Mahalanobis(dat['mean'],
                            dat['precision'],
                            self.prefix)}
@@ -77,3 +103,10 @@ class Prior(object):
                                else self.create_prior_from_samples(samples)
 
         return self.priors[pid]
+
+import os
+if __name__ == "__main__":
+    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+    Prior(sm='xx')
+
+    get_prior(gender='male', precomputed=True)

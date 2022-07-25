@@ -51,6 +51,7 @@ class SMPL_Layer(Module):
         smpl_data = ready_arguments(self.model_path)
         self.smpl_data = smpl_data
 
+
         self.register_buffer('th_betas',
                              torch.Tensor(smpl_data['betas'].r).unsqueeze(0))
         self.register_buffer('th_shapedirs',
@@ -67,6 +68,29 @@ class SMPL_Layer(Module):
                              torch.Tensor(smpl_data['weights'].r))
         self.register_buffer('th_faces',
                              torch.Tensor(smpl_data['f'].astype(np.int32)).long())
+
+        # Get hand mean
+        self.use_pca = False
+        self.ncomps = 45
+        self.joint_rot_mode = 'axisang'
+
+        flat_hand_mean = True
+        hands_components = smpl_data['hands_components']
+        hands_mean = np.zeros(hands_components.shape[1]
+                              ) if flat_hand_mean else smpl_data['hands_mean']
+        hands_mean = hands_mean.copy()
+        th_hands_mean = torch.Tensor(hands_mean).unsqueeze(0)
+        if self.use_pca or self.joint_rot_mode == 'axisang':
+            # Save as axis-angle
+            self.register_buffer('th_hands_mean', th_hands_mean)
+            selected_components = hands_components[:self.ncomps]
+            self.register_buffer('th_comps', torch.Tensor(hands_components))
+            self.register_buffer('th_selected_comps',
+                                 torch.Tensor(selected_components))
+        else:
+            th_hands_mean_rotmat = rodrigues_layer.batch_rodrigues(
+                th_hands_mean.view(15, 3)).reshape(15, 3, 3)
+            self.register_buffer('th_hands_mean_rotmat', th_hands_mean_rotmat)
 
         # Kinematic chain params
         self.kintree_table = smpl_data['kintree_table']

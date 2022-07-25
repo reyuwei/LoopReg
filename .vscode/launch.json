@@ -5,14 +5,48 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
             "name": "train",
             "type": "python",
             "request": "launch",
             "program": "train_PartSpecificNet.py",
             "console": "integratedTerminal",
-            "args": ["1", "-batch_size", "1", 
-                "-pretrained_path", "experiments/part_specific_net/exp_id_1/checkpoints/",
-                "-cache_suffix", "cache_1", "-split_file", "assets/hand_data_split_01.pkl"],
+            "args": [
+                "1",
+                "-batch_size",
+                "24",
+                "-pretrained_path",
+                "experiments/part_specific_net/exp_id_1/checkpoints/",
+                "-cache_suffix",
+                "cache_1",
+                "-split_file",
+                "assets/hand_data_split_01.pkl"
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "test",
+            "type": "python",
+            "request": "launch",
+            "program": "train_PartSpecificNet.py",
+            "console": "integratedTerminal",
+            "args": [
+                "1",
+                "-mode", "val",
+                "-save_name", "corr", 
+                "-batch_size", "1",
+                "-pretrained_path",
+                "experiments/part_specific_net/exp_id_1/checkpoints/",
+                "-split_file",
+                "assets/hand_data_split_01.pkl"
+            ],
             "justMyCode": true
         },
         {

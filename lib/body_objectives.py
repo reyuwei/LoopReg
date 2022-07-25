@@ -29,11 +29,11 @@ HAND_VISIBLE = 0.2
 
 part2num = {
     'palm' : 0, 
-    'index': 1,
-    'middle': 2,
-    'pinky': 3,
-    'ring': 4,
-    'thumb': 5
+    'index0': 1, 'index1': 2, 'index2': 3,
+    'middle0': 4,'middle1': 5,'middle2': 6,
+    'pinky0': 7,'pinky1': 8,'pinky2': 9,
+    'ring0': 10,'ring1': 11,'ring2': 12,
+    'thumb0': 13,'thumb1': 14, 'thumb2': 15,
 }
 
 

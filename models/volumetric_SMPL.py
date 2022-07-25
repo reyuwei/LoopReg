@@ -18,7 +18,7 @@ def correspondence_to_smpl_function(points, grid, d_grid=None):
     grid = grid.permute(0, 3, 2, 1)
     sz = points.shape
     points_ = points.reshape(1, -1, 3).unsqueeze(1).unsqueeze(1)
-    feats = F.grid_sample(grid.unsqueeze(0), points_)
+    feats = F.grid_sample(grid.unsqueeze(0), points_, align_corners=True)
     feats = feats.squeeze(2).squeeze(2).view(-1, sz[0], sz[1]).permute(1, 2, 0)
     return feats
 

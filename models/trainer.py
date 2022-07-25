@@ -284,14 +284,14 @@ class CombinedTrainer(Trainer):
             requires_grad=False).unsqueeze(0)
 
         self.pose_prior = get_prior('male', precomputed=True)
-        # self.pose_prior = get_prior('male', precomputed=False)
 
         # Load smpl part labels
-        with open('assets/mano_parts_dense.pkl', 'rb') as f:
-            dat = pkl.load(f, encoding='latin-1')
-        self.smpl_parts = np.zeros((778, 1))
-        for n, k in enumerate(dat):
-            self.smpl_parts[dat[k]] = n
+        self.smpl_parts = np.load('assets/mano_label_right.txt').reshape(-1, 1)
+        # with open('assets/mano_parts_dense.pkl', 'rb') as f:
+        #     dat = pkl.load(f, encoding='latin-1')
+        # self.smpl_parts = np.zeros((778, 1))
+        # for n, k in enumerate(dat):
+        #     self.smpl_parts[dat[k]] = n
 
         self.exp_path = join(os.path.dirname(__file__), '../experiments/{}'.format(exp_name))
         self.checkpoint_path = join(self.exp_path, 'checkpoints/'.format(exp_name))
@@ -338,7 +338,8 @@ class CombinedTrainer(Trainer):
         Phase_03: Jointly update SMPL and correspondences.
         """
         if phase == 1:
-            return {'corr': 2 * 10. ** 2, 'templ': 2 * 10. ** 2, 's2m': 10. ** 1, 'm2s': 10. ** 1, 'pose_pr': 10. ** -2,
+            return {'corr': 2 * 10. ** 2, 'templ': 2 * 10. ** 2, 's2m': 10. ** 1, 'm2s': 10. ** 1, 'pose_pr': 0,
+            # 'pose_pr': 10. ** -2,
                     'shape_pr': 10. ** -1}
         elif phase == 2:
             return {'corr': 10. ** 0, 'templ': 2 * 10. ** 2, 's2m': 2 * 10. ** 3, 'm2s': 10. ** 3, 'pose_pr': 10. ** -4,
@@ -377,6 +378,7 @@ class CombinedTrainer(Trainer):
             sum_loss = None
             loop = tqdm(self.train_data_loader)
             for n, batch in enumerate(loop):
+                # continue
                 loss = self.train_step(batch, phase=phase)
                 # print(" Epoch: {}, Current loss: {}".format(epoch, loss))
                 if sum_loss is None:
