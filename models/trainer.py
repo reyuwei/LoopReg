@@ -286,7 +286,7 @@ class CombinedTrainer(Trainer):
         self.pose_prior = get_prior('male', precomputed=True)
 
         # Load smpl part labels
-        self.smpl_parts = np.load('assets/mano_label_right.txt').reshape(-1, 1)
+        self.smpl_parts = np.loadtxt('assets/mano_label_right.txt').reshape(-1, 1)
         # with open('assets/mano_parts_dense.pkl', 'rb') as f:
         #     dat = pkl.load(f, encoding='latin-1')
         # self.smpl_parts = np.zeros((778, 1))

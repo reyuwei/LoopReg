@@ -40,7 +40,7 @@ class MyDataLoader(Dataset):
         # self.vt, self.ft = sp.get_vt_ft()
 
         # Load smpl part labels
-        self.smpl_parts = np.load('assets/mano_label_right.txt').reshape(-1, 1)
+        self.smpl_parts = np.loadtxt('assets/mano_label_right.txt').reshape(-1, 1)
         # with open('assets/mano_parts_dense.pkl', 'rb') as f:
         #     dat = pkl.load(f, encoding='latin-1')
         # # self.smpl_parts = np.zeros((6890, 1))
@@ -140,9 +140,13 @@ class MyDataLoader(Dataset):
 
         name = split(path)[1]
 
+        if "_deobj.obj" in name:
+            name = name.replace("_deobj.obj", ".ply")
 
         input_smpl = Mesh(filename= str(mpi_data_root / 'handsOnly_REGISTRATIONS_r_lm___POSES' / name))
         input_scan = Mesh(filename=path)
+
+        return None
         # input_smpl = Mesh(filename=join(path, name + '_smpl.obj'))
         # if self.naked:
         #     input_scan = Mesh(filename=join(path, name + '_smpl.obj'))
@@ -201,7 +205,7 @@ class MyDataLoaderCacher(MyDataLoader):
         self.vt, self.ft = sp.get_vt_ft()
 
         # Load smpl part labels
-        self.smpl_parts = np.load('assets/mano_label_right.txt').reshape(-1, 1)
+        self.smpl_parts = np.loadtxt('assets/mano_label_right.txt').reshape(-1, 1)
         # with open('assets/mano_parts_dense.pkl', 'rb') as f:
         #     dat = pkl.load(f, encoding='latin-1')
         # self.smpl_parts = np.zeros((778, 1))
