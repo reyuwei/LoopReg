@@ -22,7 +22,7 @@ from pathlib import Path
 NUM_POINTS = 30000
 
 class MyDataLoader(Dataset):
-    def __init__(self, mode, batch_sz, data_path=DATA_PATH,
+    def __init__(self, mode, batch_sz, num_labels,  data_path=DATA_PATH,
                  split_file='assets/data_split_01.pkl', num_workers=12,
                  augment=False, naked=False):
         self.mode = mode
@@ -40,13 +40,16 @@ class MyDataLoader(Dataset):
         # self.vt, self.ft = sp.get_vt_ft()
 
         # Load smpl part labels
-        self.smpl_parts = np.loadtxt('assets/mano_label_right.txt').reshape(-1, 1)
-        # with open('assets/mano_parts_dense.pkl', 'rb') as f:
-        #     dat = pkl.load(f, encoding='latin-1')
-        # # self.smpl_parts = np.zeros((6890, 1))
-        # self.smpl_parts = np.zeros((778, 1))
-        # for n, k in enumerate(dat):
-        #     self.smpl_parts[dat[k]] = n
+        if num_labels == 16:
+            self.smpl_parts = np.loadtxt('assets/mano_label_right.txt').reshape(-1, 1)
+        else:
+            with open('assets/mano_parts_dense.pkl', 'rb') as f:
+                dat = pkl.load(f, encoding='latin-1')
+            # self.smpl_parts = np.zeros((6890, 1))
+            self.smpl_parts = np.zeros((778, 1))
+            for n, k in enumerate(dat):
+                self.smpl_parts[dat[k]] = n
+        print(np.unique(self.smpl_parts))
 
     def __len__(self):
         return len(self.data)
@@ -146,7 +149,6 @@ class MyDataLoader(Dataset):
         input_smpl = Mesh(filename= str(mpi_data_root / 'handsOnly_REGISTRATIONS_r_lm___POSES' / name))
         input_scan = Mesh(filename=path)
 
-        return None
         # input_smpl = Mesh(filename=join(path, name + '_smpl.obj'))
         # if self.naked:
         #     input_scan = Mesh(filename=join(path, name + '_smpl.obj'))
@@ -185,7 +187,7 @@ class MyDataLoaderCacher(MyDataLoader):
     Loads scan points, cached SMPL parameters, GT correspondences.
     """
 
-    def __init__(self, mode, batch_sz, data_path=DATA_PATH,
+    def __init__(self, mode, batch_sz, num_labels, data_path=DATA_PATH,
                  split_file='assets/data_split_01.pkl',
                  cache_suffix=None,
                  num_workers=12, augment=False, naked=False):
@@ -205,12 +207,16 @@ class MyDataLoaderCacher(MyDataLoader):
         self.vt, self.ft = sp.get_vt_ft()
 
         # Load smpl part labels
-        self.smpl_parts = np.loadtxt('assets/mano_label_right.txt').reshape(-1, 1)
-        # with open('assets/mano_parts_dense.pkl', 'rb') as f:
-        #     dat = pkl.load(f, encoding='latin-1')
-        # self.smpl_parts = np.zeros((778, 1))
-        # for n, k in enumerate(dat):
-        #     self.smpl_parts[dat[k]] = n
+        if num_labels == 16:
+            self.smpl_parts = np.loadtxt('assets/mano_label_right.txt').reshape(-1, 1)
+        else:
+            with open('assets/mano_parts_dense.pkl', 'rb') as f:
+                dat = pkl.load(f, encoding='latin-1')
+            # self.smpl_parts = np.zeros((6890, 1))
+            self.smpl_parts = np.zeros((778, 1))
+            for n, k in enumerate(dat):
+                self.smpl_parts[dat[k]] = n
+        print(np.unique(self.smpl_parts))
 
     def __getitem__(self, idx):
         path = self.data[idx]

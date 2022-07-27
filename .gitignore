@@ -5,3 +5,6 @@ assets/smpl/*
 assets/volumetric*
 scan.xyz
 *.xyz
+*.obj
+*.ipynb
+*.ply

@@ -57,10 +57,48 @@
             "console": "integratedTerminal",
             "args": [
                 "-batch_size",
-                "16",
+                "24",
                 "-split_file",
-                "assets/hand_data_split_01.pkl",
-                "1"
+                "assets/hand_data_split_01_deobj.pkl",
+                "2"
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "warmup_val",
+            "type": "python",
+            "request": "launch",
+            "program": "warmup_PartSpecificNet.py",
+            "console": "integratedTerminal",
+            "args": [
+                "-batch_size",
+                "8",
+                "-split_file",
+                "assets/hand_data_split_01_deobj.pkl",
+                "-mode",
+                "val",
+                "-save_name",
+                "corrnet",
+                "2",
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "warmup_eval",
+            "type": "python",
+            "request": "launch",
+            "program": "warmup_PartSpecificNet.py",
+            "console": "integratedTerminal",
+            "args": [
+                "-batch_size",
+                "8",
+                "-split_file",
+                "assets/hand_data_split_01_deobj.pkl",
+                "-mode",
+                "eval",
+                "-save_name",
+                "corrnet",
+                "2",
             ],
             "justMyCode": true
         }

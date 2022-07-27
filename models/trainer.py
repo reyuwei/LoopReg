@@ -89,7 +89,7 @@ class Trainer(object):
         logits = self.model(scan)
 
         # MSE loss on vertices
-        mse = F.mse_loss(logits.view(-1, 6890, 3), smpl)
+        mse = F.mse_loss(logits.view(-1, 778, 3), smpl)
 
         loss = {'mse': mse}
         return loss
@@ -221,7 +221,7 @@ class TrainerPartSpecificNet(Trainer):
                 out = self.model(scan.to(self.device))
                 pred = out['correspondences'].detach().permute(0, 2, 1).cpu().numpy()
                 part_label = out['part_labels'].detach()
-                _, part_label = torch.max(part_label.data, -1)
+                _, part_label = torch.max(part_label.data, 1)
                 part_label = np.array(part_label.cpu())
 
             for v, name, sc, vc, pl in zip(pred, names, scan, vcs, part_label):
@@ -286,12 +286,15 @@ class CombinedTrainer(Trainer):
         self.pose_prior = get_prior('male', precomputed=True)
 
         # Load smpl part labels
-        self.smpl_parts = np.loadtxt('assets/mano_label_right.txt').reshape(-1, 1)
-        # with open('assets/mano_parts_dense.pkl', 'rb') as f:
-        #     dat = pkl.load(f, encoding='latin-1')
-        # self.smpl_parts = np.zeros((778, 1))
-        # for n, k in enumerate(dat):
-        #     self.smpl_parts[dat[k]] = n
+
+        if self.model.num_parts == 16:        
+            self.smpl_parts = np.loadtxt('assets/mano_label_right.txt').reshape(-1, 1)
+        else:
+            with open('assets/mano_parts_dense.pkl', 'rb') as f:
+                dat = pkl.load(f, encoding='latin-1')
+            self.smpl_parts = np.zeros((778, 1))
+            for n, k in enumerate(dat):
+                self.smpl_parts[dat[k]] = n
 
         self.exp_path = join(os.path.dirname(__file__), '../experiments/{}'.format(exp_name))
         self.checkpoint_path = join(self.exp_path, 'checkpoints/'.format(exp_name))
