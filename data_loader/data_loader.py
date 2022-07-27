@@ -187,13 +187,14 @@ class MyDataLoaderCacher(MyDataLoader):
     Loads scan points, cached SMPL parameters, GT correspondences.
     """
 
-    def __init__(self, mode, batch_sz, num_labels, data_path=DATA_PATH,
+    def __init__(self, mode, batch_sz, num_labels,  pose_ncomp, data_path=DATA_PATH,
                  split_file='assets/data_split_01.pkl',
                  cache_suffix=None,
                  num_workers=12, augment=False, naked=False):
         self.mode = mode
         self.cache_suffix = cache_suffix
         self.path = data_path
+        self.pose_ncomp = pose_ncomp
         with open(split_file, "rb") as f:
             self.split = pkl.load(f)
 
@@ -220,14 +221,18 @@ class MyDataLoaderCacher(MyDataLoader):
 
     def __getitem__(self, idx):
         path = self.data[idx]
+        mpi_data_root = Path(path).parent.parent
+        
         name = split(path)[1]
+        
+        if "_deobj.obj" in name:
+            name = name.replace("_deobj.obj", ".ply")
 
         # input_smpl = Mesh(filename=join(path, name + '_smpl.obj'))
         # if self.naked:
         #     input_scan = Mesh(filename=join(path, name + '_smpl.obj'))
         # else:
         #     input_scan = Mesh(filename=join(path, name + '.obj'))
-        mpi_data_root = Path(path).parent.parent
 
         input_smpl = Mesh(filename=str(mpi_data_root / 'handsOnly_REGISTRATIONS_r_lm___POSES' / name))
         input_scan = Mesh(filename=path)
@@ -255,7 +260,8 @@ class MyDataLoaderCacher(MyDataLoader):
             trans = smpl_dict['trans']
             # print('Loading from cache ', cache_list[-1])
         else:
-            pose = np.zeros((45+3,))
+            # pose = np.zeros((45+3,))
+            pose = np.zeros((3+self.pose_ncomp))
             betas = np.zeros((10,))
             trans = np.zeros((3,))
 

@@ -28,7 +28,7 @@ def load_pretrained(path, net):
     print('Loaded weights from ', path)
     return
 
-def main(mode, exp_id, optimizer, batch_size, epochs, num_labels,pretrained_path=None, save_name=None, num_saves=None,
+def main(mode, exp_id, optimizer, batch_size, epochs, num_labels, pose_ncomp, pretrained_path=None, save_name=None, num_saves=None,
          naked=False, cache_suffix='cache', checkpoint_number=-1, split_file=None):
 
     if split_file is None:
@@ -48,7 +48,7 @@ def main(mode, exp_id, optimizer, batch_size, epochs, num_labels,pretrained_path
         exp_name = 'combined_net/exp_id_{}'.format(exp_id)
 
     if mode == 'train':
-        dataset = MyDataLoaderCacher('train', batch_size, num_labels, cache_suffix=cache_suffix,
+        dataset = MyDataLoaderCacher('train', batch_size, num_labels, pose_ncomp, cache_suffix=cache_suffix, 
                                      split_file=split_file,
                                      num_workers=0, augment=False, naked=naked).get_loader()
         """ 
@@ -64,7 +64,7 @@ def main(mode, exp_id, optimizer, batch_size, epochs, num_labels,pretrained_path
         trainer.train_model(epochs)
     elif mode == 'val':
         # MyDataLoaderFaustTest, MyDataLoaderCacher
-        dataset = MyDataLoaderCacher('val', batch_size, num_labels, cache_suffix=cache_suffix, split_file=split_file,
+        dataset = MyDataLoaderCacher('val', batch_size, num_labels,  pose_ncomp, cache_suffix=cache_suffix, split_file=split_file,
                                      num_workers=0, naked=naked).get_loader(shuffle=False)
         trainer = CombinedTrainer(corr_net, torch.device("cuda"), None, dataset, exp_name,
                                   optimizer=optimizer, opt_dict={'cache_folder': cache_suffix,
@@ -73,7 +73,7 @@ def main(mode, exp_id, optimizer, batch_size, epochs, num_labels,pretrained_path
         trainer.fit_test_sample(save_name=save_name, num_saves=num_saves)
 
     elif mode == 'eval':
-        dataset = MyDataLoaderCacher('val', batch_size, num_labels, cache_suffix=cache_suffix, split_file=split_file,
+        dataset = MyDataLoaderCacher('val', batch_size, num_labels,  pose_ncomp, cache_suffix=cache_suffix, split_file=split_file,
                                      num_workers=0, naked=naked).get_loader(shuffle=False)
         trainer = CombinedTrainer(corr_net, torch.device("cuda"), None, dataset, exp_name,
                                   optimizer=optimizer, opt_dict={'cache_folder': cache_suffix},
@@ -102,6 +102,7 @@ if __name__ == "__main__":
     parser.add_argument('-save_name', default='', type=str)
     parser.add_argument('-num_saves', default=None, type=int)
     parser.add_argument('-num_labels', default=16, type=int)
+    parser.add_argument('-pose_ncomp', default=10, type=int)
 
     args = parser.parse_args()
 
@@ -120,16 +121,16 @@ if __name__ == "__main__":
 
     if args.mode == 'val':
         assert len(args.save_name) > 0
-        main('val', args.exp_id, args.optimizer, args.batch_size, args.epochs, args.num_labels,
+        main('val', args.exp_id, args.optimizer, args.batch_size, args.epochs, args.num_labels, args.pose_ncomp,
              save_name=args.save_name, num_saves=args.num_saves, naked=args.naked,
              pretrained_path=args.pretrained_path, checkpoint_number=args.checkpoint_number, split_file=args.split_file)
     elif args.mode == 'train':
-        main('train', args.exp_id, args.optimizer, args.batch_size, args.epochs, args.num_labels, naked=args.naked,
+        main('train', args.exp_id, args.optimizer, args.batch_size, args.epochs, args.num_labels, args.pose_ncomp,naked=args.naked,
              pretrained_path=args.pretrained_path, cache_suffix=args.cache_suffix,
              checkpoint_number=args.checkpoint_number, split_file=args.split_file)
 
     elif args.mode == 'eval':
-        main('eval', args.exp_id, args.optimizer, args.batch_size, args.epochs,  args.num_labels,naked=args.naked,
+        main('eval', args.exp_id, args.optimizer, args.batch_size, args.epochs,  args.num_labels,args.pose_ncomp,naked=args.naked,
              checkpoint_number=args.checkpoint_number, split_file=args.split_file)
 
 """

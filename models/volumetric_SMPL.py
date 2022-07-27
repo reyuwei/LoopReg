@@ -5,12 +5,16 @@ Cite: LoopReg: Self-supervised Learning of Implicit Surface Correspondences, Pos
 """
 
 import os
-from os.path import join, split, exists
+from os.path import join
+import sys
+from pathlib import Path
+folder_root = Path().resolve()
+sys.path.append(str(folder_root))
+
 import torch
 from torch import nn
 import torch.nn.functional as F
 import pickle as pkl
-import sys
 from smplpytorch.smplpytorch.pytorch.tensutils import (th_posemap_axisang, th_with_zeros, th_pack, make_list, subtract_flat_id)
 from lib.smpl_layer import SMPL_Layer
 
@@ -60,6 +64,16 @@ class VolumetricSMPL(nn.Module):
                 skinning_weights = pkl.load(f, encoding='latin-1').astype('float32')
                 self.skinning_weights = torch.tensor(skinning_weights,
                                                      requires_grad=False).permute(3, 0, 1, 2).to(device)
+
+            # # Load posepca
+            with open(join(folder, 'hands_components.pkl'), 'rb') as f:
+                hand_components = pkl.load(f, encoding='latin-1').astype('float32')
+                self.hand_components = torch.tensor(hand_components,
+                                                     requires_grad=False).to(device)
+            with open(join(folder, 'hands_mean.pkl'), 'rb') as f:
+                hands_mean = pkl.load(f, encoding='latin-1').astype('float32')
+                self.hands_mean = torch.tensor(hands_mean,
+                                                     requires_grad=False).to(device)
 
         self.grid_fn = correspondence_to_smpl_function
         ## pytorch smpl
@@ -116,7 +130,7 @@ class VolumetricSMPL(nn.Module):
 
         return th_results2
 
-    def compute_transformed_points(self, points, pose, beta, trans):
+    def compute_transformed_points(self, points, pose, beta, trans, pose_pca=True):
         """
         Takes points in R^3 and first applies relevant pose and shape blend shapes.
         Then performs skinning.
@@ -126,22 +140,31 @@ class VolumetricSMPL(nn.Module):
         shapedirs = self.grid_fn(points, self.shapedirs)
         skinning_weights = self.grid_fn(points, self.skinning_weights)
         closest_point = self.grid_fn(points, self.closest_point)
+        # should be in original space
 
         # reshape back
         shapedirs = shapedirs.view(batch_size, -1, 3, 10)
         posedirs = posedirs.view(batch_size, -1, 3, 135)
         skinning_weights = skinning_weights.view(batch_size, -1, 16)
 
+        ##########
+        if pose_pca:
+            pose_ncomp = pose.shape[-1] - 3   # ncomp
+            th_hand_pose_coeffs = pose[:, 3:]  # pose coeff
+            th_full_hand_pose = th_hand_pose_coeffs.mm(self.hand_components[:pose_ncomp]) #axis angles
+            # Concatenate back global rot
+            th_full_pose = torch.cat([pose[:, :3], th_full_hand_pose], 1) # B, 45+3
+        else:
+            th_full_pose = pose
+
         # Convert axis-angle representation to rotation matrix rep.
-        th_pose_rotmat = th_posemap_axisang(pose)
+        th_pose_rotmat = th_posemap_axisang(th_full_pose)
         th_pose_rotmat = th_pose_rotmat[:, 9:]
         th_pose_map = subtract_flat_id(th_pose_rotmat)
-
         p_v_shaped = closest_point + (shapedirs * beta.unsqueeze(1).unsqueeze(1)).sum(-1)
-
         p_v_posed = p_v_shaped + (posedirs * th_pose_map.unsqueeze(1).unsqueeze(1)).sum(-1)
 
-        th_results2 = self.compute_smpl_skeleton(beta, pose)
+        th_results2 = self.compute_smpl_skeleton(beta, th_full_pose)
 
         # Skinning
         p_T = torch.bmm(th_results2.view(-1, 16, 16), skinning_weights.transpose(2, 1)).view(batch_size, 4, 4, -1)
@@ -158,50 +181,68 @@ class VolumetricSMPL(nn.Module):
         p_verts = p_verts + trans.unsqueeze(1)
         return p_verts
 
-    def forward(self, points, pose, beta, trans, offsets=None):
+    def forward(self, points, pose, beta, trans, offsets=None, pose_pca=True):
         """
-        :param points: correspondences in R^3. Must be normalized.
+        :param points: correspondences in R^3. Must be normalized, original MANO space
         :param pose, shape, trans: SMPL params
         """
         # normalize the correspondences
         points_ = self.transform_points(points)
+        #### in uniform cooridinate
 
         # Compute forward SMPL function on correspondences
-        p_tr = self.compute_transformed_points(points_, pose, beta, trans)
+        p_tr = self.compute_transformed_points(points_, pose, beta, trans, pose_pca=pose_pca)
 
         return p_tr
 
 
 def test():
-    name = join('assets/rp_eric_rigged_005_zup_a_smpl.obj')
+    device = torch.zeros(1).cuda().device
+    # name = join('assets/rp_eric_rigged_005_zup_a_smpl.obj')
+    from pathlib import Path
+    from lib.smpl_paths import SmplPaths
+    import trimesh
+    vsmpl = VolumetricSMPL('assets/volumetric_mano_function_64_1.6',
+                            device, 'male')
 
-    # Load SMPL params
-    dat = pkl.load(open(name.replace('_smpl.obj', '_param.pkl'), 'rb'), encoding='latin-1')
-    vsmpl = VolumetricSMPL('assets/volumetric_smpl_function_64',
-                           'cuda', 'male')
+    sp = SmplPaths(gender='male')
+    ref_smpl = sp.get_smpl()
+    template_points = torch.tensor(
+        trimesh.Trimesh(vertices=ref_smpl.r, faces=ref_smpl.f).sample(30000).astype('float32'),
+        requires_grad=False).unsqueeze(0).to('cuda')
 
-    '''Sanity check: transform SMPL vertices using SMPL and VolumetricSMPL'''
-    corr = init_SMPL('male', dat)
-    corr.pose[:] = 0
-    corr.trans[:] = 0
-    corr.betas[:] = 0
-    p = torch.tensor([corr.r.astype('float32')] * 2).to('cuda')
-    b = torch.tensor([dat['betas'][:10].astype('float32')] * 2).to('cuda')
-    po = torch.tensor([dat['pose'].astype('float32')] * 2).to('cuda')
-    t = torch.tensor([dat['trans'].astype('float32')] * 2).to('cuda')
-    ptr = vsmpl(p, po, b, t)
+    # template_points = torch.tensor(ref_smpl.r).float().unsqueeze(0).to('cuda')
 
-    Mesh(ptr[0].cpu().numpy(), []).write_ply('assets/test.ply')
-    corr = init_SMPL('male', dat)
-    Mesh(corr.r, corr.f).write_ply('assets/org.ply')
 
-    print('Done')
+    fd = Path("/data/new_disk/liyuwei/0_HANDMRI_DATA/mpi_data/handsOnly_REGISTRATIONS_r_lm___POSES")
+    for n in os.listdir(fd):
+        if ".pkl" in n:
+            # Load SMPL params
+            dat = pkl.load(open((fd / n), 'rb'), encoding='latin-1')
+            # break
+            '''Sanity check: transform SMPL vertices using SMPL and VolumetricSMPL'''
+            poses = torch.tensor([dat['pose'].astype('float32')]).to('cuda')
+
+            pose_sub_mean = poses[:,3:].view(-1, 45)
+            print(poses[:,3:])
+
+            ncomps = 40
+            th_hand_pose_coeffs = ( poses[:,3:].view(-1, 45) @ torch.inverse(vsmpl.hand_components))[:, :ncomps]
+            # th_hand_pose_coeffs[:] = 0
+            th_hand_pose_coeffs_full = torch.cat([poses[:,:3], th_hand_pose_coeffs], dim=1)
+
+            betas = torch.tensor([dat['betas'][:10].astype('float32')]).to('cuda')
+            trans = torch.tensor([dat['trans'].astype('float32')]).to('cuda')
+            ptr = vsmpl(template_points, th_hand_pose_coeffs_full, betas, trans)
+
+            Mesh(ptr[0].cpu().numpy(), []).write_ply( n+'_test2.ply')
+            print('Done')
+            break
 
 
 if __name__ == "__main__":
     from psbody.mesh import Mesh
     import numpy as np
-    from lib.smpl_helpers import init_SMPL
 
     os.environ['CUDA_VISIBLE_DEVICES'] = '1'
     test()
