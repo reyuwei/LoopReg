@@ -34,7 +34,7 @@ def main(mode, exp_id, optimizer, batch_size, epochs, num_labels, save_name=None
                                          optimizer=optimizer)
         trainer.train_model(epochs)
     elif mode == 'val':
-        dataset = MyDataLoader('val', batch_size, num_labels, num_workers=1, naked=naked,
+        dataset = MyDataLoader('val', batch_size, num_labels, num_workers=16, naked=naked,
                                  split_file=split_file).get_loader(shuffle=False)
         trainer = TrainerPartSpecificNet(corr_net, torch.device("cuda"), None, dataset, exp_name,
                                          optimizer=optimizer)

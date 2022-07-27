@@ -38,6 +38,40 @@ def closest_index(src_points: torch.Tensor, tgt_points: torch.Tensor):
             src_points, tgt_points)
     return closest_index_in_tgt
 
+
+def batch_to_tensor_device(batch, device):
+    def to_tensor(arr):
+        if isinstance(arr, torch.Tensor):
+            return arr
+        if arr.dtype == np.int64:
+            arr = torch.from_numpy(arr)
+        else:
+            arr = torch.from_numpy(arr).float()
+        return arr
+
+    for key in batch:
+        if isinstance(batch[key], np.ndarray):
+            batch[key] = to_tensor(batch[key]).to(device)
+        elif isinstance(batch[key], list):
+            for i in range(len(batch[key])):
+                if isinstance(batch[key][i], list):
+                    for j in range(len(batch[key][i])):
+                        if isinstance(batch[key][i][j], np.ndarray):
+                            batch[key][i][j] = to_tensor(batch[key][i][j]).to(device)
+                else:
+                    batch[key][i] = to_tensor(batch[key][i]).to(device)
+        elif isinstance(batch[key], str):
+            continue
+        elif isinstance(batch[key], dict):
+            for key2 in batch[key].keys():
+                batch[key][key2] = to_tensor(batch[key][key2]).to(device)
+        else:
+            print(type(batch[key]), "Not Handled!!!")
+    
+    return batch
+
+
+
 class Trainer(object):
     '''
     Trainer for predicting scan to SMPL correspondences from a pointcloud.
@@ -341,8 +375,9 @@ class CombinedTrainer(Trainer):
         Phase_03: Jointly update SMPL and correspondences.
         """
         if phase == 1:
-            return {'corr': 2 * 10. ** 2, 'templ': 2 * 10. ** 2, 's2m': 10. ** 1, 'm2s': 10. ** 1, 'pose_pr': 0,
-            # 'pose_pr': 10. ** -2,
+            return {'corr': 2 * 10. ** 2, 'templ': 2 * 10. ** 2, 's2m': 10. ** 1, 'm2s': 10. ** 1, 
+            # 'pose_pr': 0,
+            'pose_pr': 10. ** -2,
                     'shape_pr': 10. ** -1}
         elif phase == 2:
             return {'corr': 10. ** 0, 'templ': 2 * 10. ** 2, 's2m': 2 * 10. ** 3, 'm2s': 10. ** 3, 'pose_pr': 10. ** -4,
@@ -382,6 +417,7 @@ class CombinedTrainer(Trainer):
             loop = tqdm(self.train_data_loader)
             for n, batch in enumerate(loop):
                 # continue
+                batch_gpu = batch_to_tensor_device(batch, self.device)
                 loss = self.train_step(batch, phase=phase)
                 # print(" Epoch: {}, Current loss: {}".format(epoch, loss))
                 if sum_loss is None:
@@ -391,7 +427,8 @@ class CombinedTrainer(Trainer):
                 l_str = 'Ep: {}'.format(epoch)
                 for l in sum_loss:
                     l_str += ', {}: {:0.5f}'.format(l, sum_loss[l] / (1 + n))
-                loop.set_description(l_str)
+                # loop.set_description(l_str)
+                loop.set_description("[E%d][P%d] %s" % (epoch, phase, l_str))
 
             for l in sum_loss:
                 self.writer.add_scalar(l, sum_loss[l] / len(self.train_data_loader), epoch)
@@ -459,7 +496,8 @@ class CombinedTrainer(Trainer):
         loss['m2s'] = chamfer_distance(scan, posed_smpl, w1=0) * weight_dict['m2s']
 
         # pose prior
-        loss['pose_pr'] = self.pose_prior(poses).mean() * weight_dict['pose_pr']
+        # loss['pose_pr'] = self.pose_prior(poses).mean() * weight_dict['pose_pr']
+        loss['pose_pr'] = (poses ** 2).mean() * weight_dict['pose_pr']
 
         # shape prior
         loss['shape_pr'] = (betas ** 2).mean() * weight_dict['shape_pr']
@@ -489,11 +527,14 @@ class CombinedTrainer(Trainer):
 
         # get optimization weights
         wts = self.get_optimization_weights(phase)
-        for it in range(self.opt_dict['iter_per_step'][phase]):
+        pbar = tqdm(range(self.opt_dict['iter_per_step'][phase]))
+        for it in pbar:
             smpl_optimizer.zero_grad()
 
             loss_ = self.iteration_step(batch, instance_params, weight_dict=wts)
             loss = self.sum_dict(loss_)
+
+            pbar.set_description("[P%d] Loss: %.5f" % (phase, loss))
 
             # back propagate
             loss.backward()

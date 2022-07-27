@@ -99,43 +99,6 @@ class MyDataLoader(Dataset):
         t = R.from_rotvec(rots)
         return t
 
-    # def __getitem__(self, idx):
-    #     path = self.data[idx]
-    #     name = split(path)[1]
-
-    #     input_smpl = Mesh(filename=join(path, name + '_smpl.obj'))
-    #     if self.naked:
-    #         input_scan = Mesh(filename=join(path, name + '_smpl.obj'))
-    #     else:
-    #         input_scan = Mesh(filename=join(path, name + '.obj'))
-    #     temp = trimesh.Trimesh(vertices=input_scan.v, faces=input_scan.f)
-    #     points = temp.sample(NUM_POINTS)
-
-    #     if self.augment:
-    #         rot = self.get_rnd_rotations()
-    #         points = rot.apply(points)
-    #         input_smpl.v = rot.apply(input_smpl.v)
-
-    #     ind, _ = input_smpl.closest_vertices(points)
-    #     part_labels = self.smpl_parts[np.array(ind)]
-    #     correspondences = self.map_mesh_points_to_reference(points, input_smpl, self.ref_smpl.r)
-
-    #     if self.mode == 'train':
-    #         return {'scan': points.astype('float32'),
-    #                 'correspondences': correspondences.astype('float32'),
-    #                 'part_labels': part_labels.astype('float32'),
-    #                 'name': path
-    #                 }
-
-    #     vc = self.map_vitruvian_vertex_color(points, input_smpl)
-    #     return {'scan': points.astype('float32'),
-    #             'smpl': input_smpl.v.astype('float32'),
-    #             'correspondences': correspondences.astype('float32'),
-    #             'part_labels': part_labels.astype('float32'),
-    #             'scan_vc': vc,
-    #             'name': path
-    #             }
-
     def __getitem__(self, idx):
         path = self.data[idx]
 
@@ -198,7 +161,7 @@ class MyDataLoaderCacher(MyDataLoader):
         with open(split_file, "rb") as f:
             self.split = pkl.load(f)
 
-        self.data = self.split[mode]
+        self.data = self.split[mode][:24]
         self.batch_size = batch_sz
         self.num_workers = num_workers
         self.augment = augment

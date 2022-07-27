@@ -102,11 +102,11 @@ if __name__ == "__main__":
     parser.add_argument('-save_name', default='', type=str)
     parser.add_argument('-num_saves', default=None, type=int)
     parser.add_argument('-num_labels', default=16, type=int)
-    parser.add_argument('-pose_ncomp', default=10, type=int)
+    parser.add_argument('-pose_ncomp', default=30, type=int)
 
     args = parser.parse_args()
 
-    # os.environ['CUDA_VISIBLE_DEVICES'] = '3'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '3'
     # args = lambda : None
     # args.exp_id = '2'
     # args.batch_size = 2
