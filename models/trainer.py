@@ -39,35 +39,12 @@ def closest_index(src_points: torch.Tensor, tgt_points: torch.Tensor):
     return closest_index_in_tgt
 
 
-def batch_to_tensor_device(batch, device):
-    def to_tensor(arr):
-        if isinstance(arr, torch.Tensor):
-            return arr
-        if arr.dtype == np.int64:
-            arr = torch.from_numpy(arr)
-        else:
-            arr = torch.from_numpy(arr).float()
-        return arr
-
+def batch_to_device(batch, device):
     for key in batch:
-        if isinstance(batch[key], np.ndarray):
-            batch[key] = to_tensor(batch[key]).to(device)
-        elif isinstance(batch[key], list):
-            for i in range(len(batch[key])):
-                if isinstance(batch[key][i], list):
-                    for j in range(len(batch[key][i])):
-                        if isinstance(batch[key][i][j], np.ndarray):
-                            batch[key][i][j] = to_tensor(batch[key][i][j]).to(device)
-                else:
-                    batch[key][i] = to_tensor(batch[key][i]).to(device)
+        if isinstance(batch[key], torch.Tensor):
+            batch[key] = batch[key].to(device)
         elif isinstance(batch[key], str):
-            continue
-        elif isinstance(batch[key], dict):
-            for key2 in batch[key].keys():
-                batch[key][key2] = to_tensor(batch[key][key2]).to(device)
-        else:
-            print(type(batch[key]), "Not Handled!!!")
-    
+            batch[key] = batch[key]
     return batch
 
 
@@ -311,24 +288,10 @@ class CombinedTrainer(Trainer):
         # Load vsmpl
         self.vsmpl = VolumetricSMPL('assets/volumetric_mano_function_64_1.6',
                                     device, 'male')
-        sp = SmplPaths(gender='male')
-        self.ref_smpl = sp.get_smpl()
+        # sp = SmplPaths(gender='male')
+        # self.ref_smpl = sp.get_smpl()
         self.template_points = torch.tensor(
-            trimesh.Trimesh(vertices=self.ref_smpl.r, faces=self.ref_smpl.f).sample(NUM_POINTS).astype('float32'),
-            requires_grad=False).unsqueeze(0)
-
-        self.pose_prior = get_prior('male', precomputed=True)
-
-        # Load smpl part labels
-
-        if self.model.num_parts == 16:        
-            self.smpl_parts = np.loadtxt('assets/mano_label_right.txt').reshape(-1, 1)
-        else:
-            with open('assets/mano_parts_dense.pkl', 'rb') as f:
-                dat = pkl.load(f, encoding='latin-1')
-            self.smpl_parts = np.zeros((778, 1))
-            for n, k in enumerate(dat):
-                self.smpl_parts[dat[k]] = n
+            trimesh.load("assets/template_mesh.obj").sample(NUM_POINTS).astype('float32'),requires_grad=False).unsqueeze(0).to(self.device)
 
         self.exp_path = join(os.path.dirname(__file__), '../experiments/{}'.format(exp_name))
         self.checkpoint_path = join(self.exp_path, 'checkpoints/'.format(exp_name))
@@ -417,8 +380,9 @@ class CombinedTrainer(Trainer):
             loop = tqdm(self.train_data_loader)
             for n, batch in enumerate(loop):
                 # continue
-                batch_gpu = batch_to_tensor_device(batch, self.device)
-                loss = self.train_step(batch, phase=phase)
+                # continue
+                batch_gpu = batch_to_device(batch, self.device)
+                loss = self.train_step(batch_gpu, phase=phase)
                 # print(" Epoch: {}, Current loss: {}".format(epoch, loss))
                 if sum_loss is None:
                     sum_loss = Counter(loss)
@@ -446,7 +410,7 @@ class CombinedTrainer(Trainer):
 
         device = self.device
         loss = {}
-        scan = batch.get('scan').to(device)
+        scan = batch.get('scan')
         batch_sz = scan.shape[0]
         # predict initial correspondences
         out = self.model(scan)
@@ -468,13 +432,13 @@ class CombinedTrainer(Trainer):
         # mask = self.filter_correspondences(corr, part_label)
 
         if self.train_supervised:
-            gt_part_label = batch.get('part_labels').to(device).long()
-            correspondences = batch.get('correspondences').to(device)
+            gt_part_label = batch.get('part_labels').long()
+            correspondences = batch.get('correspondences')
             loss['part_labels'] = F.cross_entropy(out['part_labels'], gt_part_label.squeeze(-1))
             loss['correspondences'] = F.mse_loss(corr, correspondences)
 
         # get posed smpl points
-        template_points = torch.cat([self.template_points] * batch_sz, axis=0).to(device)
+        template_points = torch.cat([self.template_points] * batch_sz, axis=0)
 
         posed_smpl = self.vsmpl(template_points, poses, betas, trans)
 
@@ -509,14 +473,14 @@ class CombinedTrainer(Trainer):
         Each training step consists of multiple iterations of optimization
         """
         # from batch take out instance specific parameters
-        pose = batch.get('pose').to(self.device).requires_grad_(True)
-        betas = batch.get('betas').to(self.device).requires_grad_(True)
-        trans = batch.get('trans').to(self.device).requires_grad_(True)
+        pose = batch.get('pose').requires_grad_(True)
+        betas = batch.get('betas').requires_grad_(True)
+        trans = batch.get('trans').requires_grad_(True)
         instance_params = {'pose': pose, 'betas': betas, 'trans': trans}
 
         # initialize optimizer for instance specific SMPL params
         smpl_optimizer = self.init_optimizer(self.optimizer_type, instance_params.values(),
-                                             learning_rate=0.001 if phase == 3 else 0.002)
+                                             learning_rate=0.001 if phase == 3 else 0.01)
 
         # We only train the regression layers
         self.model.train()

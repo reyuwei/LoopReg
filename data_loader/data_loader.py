@@ -6,6 +6,15 @@ Cite: LoopReg: Self-supervised Learning of Implicit Surface Correspondences, Pos
 
 import os
 from os.path import join, split, exists
+
+import sys
+from pathlib import Path
+
+folder_root = Path().resolve()
+sys.path.append(str(folder_root))
+
+from models.volumetric_SMPL import VolumetricSMPL
+
 import pickle as pkl
 import numpy as np
 from glob import glob
@@ -17,6 +26,8 @@ from lib.smpl_paths import SmplPaths
 from torch.utils.data import Dataset, DataLoader
 from make_data_split import DATA_PATH
 from pathlib import Path
+import torch
+import math
 
 # Number of points to sample from the scan
 NUM_POINTS = 30000
@@ -65,6 +76,21 @@ class MyDataLoader(Dataset):
         base_seed = int(codecs.encode(os.urandom(4), 'hex'), 16)
         np.random.seed(base_seed + worker_id)
 
+    # @staticmethod
+    # def worker_init_fn(worker_id):
+    #     worker_info = torch.utils.data.get_worker_info()
+    #     dataset = worker_info.dataset  # the dataset copy in this worker process
+    #     overall_start = dataset.start
+    #     overall_end = dataset.end
+    #     # configure the dataset to only process the split workload
+    #     per_worker = int(math.ceil((overall_end - overall_start) / float(worker_info.num_workers)))
+    #     worker_id = worker_info.id
+    #     dataset.start = overall_start + worker_id * per_worker
+    #     dataset.end = min(dataset.start + per_worker, overall_end)
+    #     base_seed = int(codecs.encode(os.urandom(4), 'hex'), 16)
+    #     np.random.seed(base_seed + worker_id)
+
+
     @staticmethod
     def map_mesh_points_to_reference(pts, src, ref):
         """
@@ -105,7 +131,7 @@ class MyDataLoader(Dataset):
         mpi_data_root = Path(path).parent.parent
 
         name = split(path)[1]
-
+        # print(idx, name)
         if "_deobj.obj" in name:
             name = name.replace("_deobj.obj", ".ply")
 
@@ -125,11 +151,12 @@ class MyDataLoader(Dataset):
             points = rot.apply(points)
             input_smpl.v = rot.apply(input_smpl.v)
 
-        ind, _ = input_smpl.closest_vertices(points)
+        ind, _ = input_smpl.closest_vertices(points, use_cgal=True)
         part_labels = self.smpl_parts[np.array(ind)]
         correspondences = self.map_mesh_points_to_reference(points, input_smpl, self.ref_smpl.r)
 
         if self.mode == 'train':
+            # print(idx, name, "return")
             return {'scan': points.astype('float32'),
                     'correspondences': correspondences.astype('float32'),
                     'part_labels': part_labels.astype('float32'),
@@ -161,7 +188,7 @@ class MyDataLoaderCacher(MyDataLoader):
         with open(split_file, "rb") as f:
             self.split = pkl.load(f)
 
-        self.data = self.split[mode][:24]
+        self.data = self.split[mode]
         self.batch_size = batch_sz
         self.num_workers = num_workers
         self.augment = augment
@@ -182,12 +209,15 @@ class MyDataLoaderCacher(MyDataLoader):
                 self.smpl_parts[dat[k]] = n
         print(np.unique(self.smpl_parts))
 
+    def __len__(self):
+        return len(self.data)
+
     def __getitem__(self, idx):
         path = self.data[idx]
         mpi_data_root = Path(path).parent.parent
         
         name = split(path)[1]
-        
+        # print(idx, name)
         if "_deobj.obj" in name:
             name = name.replace("_deobj.obj", ".ply")
 
@@ -208,10 +238,10 @@ class MyDataLoaderCacher(MyDataLoader):
             points = rot.apply(points)
             input_smpl.v = rot.apply(input_smpl.v)
 
-        ind, _ = input_smpl.closest_vertices(points)
+        ind, _ = input_smpl.closest_vertices(points, use_cgal=True)
         part_labels = self.smpl_parts[np.array(ind)]
         correspondences = self.map_mesh_points_to_reference(points, input_smpl, self.ref_smpl.r)
-
+        # print(idx, name, "finish_compute")
         # Load cached SMPL params
         cache_list = []
         if self.cache_suffix is not None:
@@ -229,6 +259,7 @@ class MyDataLoaderCacher(MyDataLoader):
             trans = np.zeros((3,))
 
         if self.mode == 'train':
+            # print(idx, name, "return")
             return {'scan': points.astype('float32'),
                     'correspondences': correspondences.astype('float32'),
                     'part_labels': part_labels.astype('float32'),
@@ -249,3 +280,27 @@ class MyDataLoaderCacher(MyDataLoader):
                 'scan_vc': vc,
                 'name': path
                 }
+
+from tqdm import tqdm
+if __name__ == "__main__":
+    batch_size = 3
+    num_labels= 6
+    augment = False
+    naked = False
+    os.environ['CUDA_VISIBLE_DEVICES'] = '3'
+    split_file = "assets/hand_data_split_01_deobj.pkl"
+    dataset = MyDataLoader('train', batch_size, num_labels, num_workers=0, augment=augment, 
+                            naked=naked, split_file=split_file).get_loader()
+
+
+    # dataset = MyDataLoaderCacher('train', batch_size, num_labels, 10, cache_suffix="cache", 
+    #                                  split_file=split_file,
+    #                                  num_workers=16, 
+    #                                  augment=False, naked=naked).get_loader(shuffle=False)
+
+
+    vsmpl = VolumetricSMPL('assets/volumetric_mano_function_64_1.6', torch.device("cuda"), 'male')
+    loop = tqdm(dataset)
+    for n, batch in enumerate(loop):
+        # print(n)
+        loop.set_description("%d" % n)
