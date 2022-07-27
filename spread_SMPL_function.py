@@ -133,14 +133,29 @@ def main(res, save_dir):
             pkl.dump(np.array(skinning_weights), f, protocol=2)
         print('Saved skinning_weights', skinning_weights.shape)
 
+    '''hands_components'''
+    if exists(join(save_dir, 'hands_components.pkl')) and REDO == False:
+        print('hands_components already exist')
+    else:
+        pose_pca = smpl.hands_components
+        with open(join(save_dir, 'hands_components.pkl'), 'wb') as f:
+            pkl.dump(np.array(pose_pca), f, protocol=2)
+        print('Saved hand components', pose_pca.shape)
+
+        pose_pca_mean = smpl.hands_mean
+        with open(join(save_dir, 'hands_mean.pkl'), 'wb') as f:
+            pkl.dump(np.array(pose_pca_mean), f, protocol=2)
+        print('Saved hand mean', pose_pca_mean.shape)
+
     print('Done')
 
 
 # REDO = False
 # TGT_HEIGHT = 1.6
 REDO = True
-TGT_HEIGHT = 0.2
+TGT_HEIGHT = 1.6
+# TGT_HEIGHT = 0.2
 TGT_CENTER = 0.
 if __name__ == "__main__":
     res = 64
-    main(res, save_dir='assets/volumetric_mano_function_{}'.format(res))
+    main(res, save_dir='assets/volumetric_mano_function_{}_{}'.format(res, TGT_HEIGHT))

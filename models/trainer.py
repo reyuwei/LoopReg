@@ -275,7 +275,7 @@ class CombinedTrainer(Trainer):
         self.checkpoint_number = checkpoint_number
 
         # Load vsmpl
-        self.vsmpl = VolumetricSMPL('assets/volumetric_mano_function_64',
+        self.vsmpl = VolumetricSMPL('assets/volumetric_mano_function_64_1.6',
                                     device, 'male')
         sp = SmplPaths(gender='male')
         self.ref_smpl = sp.get_smpl()
